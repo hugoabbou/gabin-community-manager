@@ -1,0 +1,10 @@
+.env
+gabin.db
+generated/
+assets/library/
+__pycache__/
+*.pyc
+*.pyo
+.DS_Store
+*.egg-info/
+.venv/

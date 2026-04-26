@@ -320,31 +320,74 @@ function renderPostCard(p, context = "queue") {
 
 function buildActions(p, context) {
   const imgSrc = p.image_path ? `/${p.image_path}` : "";
-  const caption = [p.hook, p.body, p.cta, Array.isArray(p.hashtags) ? p.hashtags.map(h=>`#${h}`).join(" ") : ""].filter(Boolean).join("\n\n");
-
-  const download = imgSrc ? `<button class="btn btn-outline btn-sm" onclick="downloadPost('${imgSrc}', ${p.id})" title="Télécharger l'image">⬇️ Télécharger</button>` : "";
-  const copy = `<button class="btn btn-outline btn-sm" onclick="copyCaption(${p.id})" title="Copier la légende">📋 Copier texte</button>`;
   const edit = `<button class="btn btn-outline btn-sm" onclick="openEditModal(${p.id})">✏️ Modifier</button>`;
   const del = `<button class="btn btn-danger btn-sm" onclick="deletePost(${p.id})">🗑</button>`;
-  const publish = `<button class="btn btn-success" onclick="publishPost(${p.id})" style="font-size:15px;padding:10px 22px">🚀 Publier sur les réseaux</button>`;
 
   if (p.status === "published") {
-    return `<span style="color:var(--gold);font-size:13px">✓ Publié</span> ${download} ${copy} ${edit} ${del}`;
+    return `
+      <span style="color:var(--gold);font-size:13px;font-weight:600">✓ Partagé</span>
+      <button class="btn btn-outline btn-sm" onclick="sharePost('${imgSrc}', ${p.id})">📤 Partager encore</button>
+      ${edit} ${del}
+    `;
   }
-  // draft or approved — show big publish button prominently
+
   return `
-    <div style="display:flex;flex-direction:column;gap:10px;width:100%">
-      ${publish}
-      <div style="display:flex;gap:8px;flex-wrap:wrap">${download} ${copy} ${edit} ${del}</div>
+    <div style="display:flex;flex-direction:column;gap:12px;width:100%">
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn btn-primary" onclick="sharePost('${imgSrc}', ${p.id})"
+          style="font-size:15px;padding:12px 24px;flex:1;min-width:180px">
+          📤 Partager sur Instagram / Facebook
+        </button>
+        <button class="btn btn-outline btn-sm" onclick="copyCaption(${p.id})" style="padding:12px 18px">
+          📋 Copier la légende
+        </button>
+      </div>
+      <div style="display:flex;gap:8px">${edit} ${del}</div>
     </div>
   `;
 }
 
-async function downloadPost(imgSrc, postId) {
+async function sharePost(imgSrc, postId) {
+  // Copy caption to clipboard first
+  const post = await api("GET", `/api/posts/${postId}`);
+  const parts = [post.hook, post.body, post.cta];
+  if (Array.isArray(post.hashtags)) parts.push(post.hashtags.map(h => `#${h}`).join(" "));
+  const captionText = parts.filter(Boolean).join("\n\n");
+
+  try { await navigator.clipboard.writeText(captionText); } catch {}
+
+  // Try native share (works great on iPhone)
+  if (navigator.share) {
+    try {
+      const response = await fetch(imgSrc);
+      const blob = await response.blob();
+      const file = new File([blob], `gabin-story-${postId}.png`, { type: "image/png" });
+
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: "Gabin" });
+        updatePostStatus(postId, "published");
+        toast("Partagé ✓");
+        return;
+      }
+    } catch (e) {
+      if (e.name !== "AbortError") console.warn("Share failed:", e);
+      else return; // User cancelled
+    }
+  }
+
+  // Fallback: download image
   const a = document.createElement("a");
   a.href = imgSrc;
   a.download = `gabin-story-${postId}.png`;
   a.click();
+  toast("Image téléchargée · Légende copiée dans le presse-papier 📋");
+  updatePostStatus(postId, "published");
+}
+
+function updatePostStatus(postId, status) {
+  api("PUT", `/api/posts/${postId}/approve`);
+  const card = document.getElementById(`postcard-${postId}`);
+  if (card) api("GET", `/api/posts/${postId}`).then(p => { card.outerHTML = renderPostCard({...p, status}, state.currentTab); });
 }
 
 async function copyCaption(postId) {
@@ -353,7 +396,14 @@ async function copyCaption(postId) {
   if (Array.isArray(post.hashtags)) parts.push(post.hashtags.map(h => `#${h}`).join(" "));
   const text = parts.filter(Boolean).join("\n\n");
   await navigator.clipboard.writeText(text);
-  toast("Légende copiée 📋");
+  toast("Légende copiée 📋 — colle-la dans Instagram après avoir posté la photo");
+}
+
+async function downloadPost(imgSrc, postId) {
+  const a = document.createElement("a");
+  a.href = imgSrc;
+  a.download = `gabin-story-${postId}.png`;
+  a.click();
 }
 
 function statusLabel(s) {

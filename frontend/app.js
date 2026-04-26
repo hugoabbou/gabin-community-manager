@@ -319,24 +319,41 @@ function renderPostCard(p, context = "queue") {
 }
 
 function buildActions(p, context) {
+  const imgSrc = p.image_path ? `/${p.image_path}` : "";
+  const caption = [p.hook, p.body, p.cta, Array.isArray(p.hashtags) ? p.hashtags.map(h=>`#${h}`).join(" ") : ""].filter(Boolean).join("\n\n");
+
+  const download = imgSrc ? `<button class="btn btn-outline btn-sm" onclick="downloadPost('${imgSrc}', ${p.id})" title="Télécharger l'image">⬇️ Télécharger</button>` : "";
+  const copy = `<button class="btn btn-outline btn-sm" onclick="copyCaption(${p.id})" title="Copier la légende">📋 Copier texte</button>`;
   const edit = `<button class="btn btn-outline btn-sm" onclick="openEditModal(${p.id})">✏️ Modifier</button>`;
-  const del = `<button class="btn btn-danger btn-sm" onclick="deletePost(${p.id})">🗑 Supprimer</button>`;
+  const del = `<button class="btn btn-danger btn-sm" onclick="deletePost(${p.id})">🗑</button>`;
+  const publish = `<button class="btn btn-success" onclick="publishPost(${p.id})" style="font-size:15px;padding:10px 22px">🚀 Publier sur les réseaux</button>`;
 
   if (p.status === "published") {
-    return `${edit} ${del}`;
+    return `<span style="color:var(--gold);font-size:13px">✓ Publié</span> ${download} ${copy} ${edit} ${del}`;
   }
-  if (p.status === "approved") {
-    return `
-      <button class="btn btn-success btn-sm" onclick="publishPost(${p.id})">🚀 Publier maintenant</button>
-      ${edit} ${del}
-    `;
-  }
-  // draft
+  // draft or approved — show big publish button prominently
   return `
-    <button class="btn btn-primary btn-sm" onclick="approvePost(${p.id})">✅ Approuver</button>
-    <button class="btn btn-success btn-sm" onclick="publishPost(${p.id})">🚀 Publier</button>
-    ${edit} ${del}
+    <div style="display:flex;flex-direction:column;gap:10px;width:100%">
+      ${publish}
+      <div style="display:flex;gap:8px;flex-wrap:wrap">${download} ${copy} ${edit} ${del}</div>
+    </div>
   `;
+}
+
+async function downloadPost(imgSrc, postId) {
+  const a = document.createElement("a");
+  a.href = imgSrc;
+  a.download = `gabin-story-${postId}.png`;
+  a.click();
+}
+
+async function copyCaption(postId) {
+  const post = await api("GET", `/api/posts/${postId}`);
+  const parts = [post.hook, post.body, post.cta];
+  if (Array.isArray(post.hashtags)) parts.push(post.hashtags.map(h => `#${h}`).join(" "));
+  const text = parts.filter(Boolean).join("\n\n");
+  await navigator.clipboard.writeText(text);
+  toast("Légende copiée 📋");
 }
 
 function statusLabel(s) {

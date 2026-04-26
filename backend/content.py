@@ -83,7 +83,7 @@ def _call_gemini(prompt: str) -> str:
         raise ValueError("GEMINI_API_KEY non configurée dans .env")
     genai.configure(api_key=api_key)
     model = genai.GenerativeModel(
-        "gemini-1.5-flash",
+        "gemini-2.0-flash",
         system_instruction=GABIN_SYSTEM,
     )
     response = model.generate_content(prompt)

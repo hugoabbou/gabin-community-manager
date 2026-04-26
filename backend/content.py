@@ -77,20 +77,23 @@ def _parse_ai_response(raw: str) -> dict:
 
 
 def _call_gemini(prompt: str) -> str:
-    from google import genai
+    import requests as req
     api_key = os.getenv("GEMINI_API_KEY", "")
     if not api_key:
         raise ValueError("GEMINI_API_KEY non configurée dans .env")
-    client = genai.Client(api_key=api_key)
-    response = client.models.generate_content(
-        model="gemini-2.5-flash-preview-04-17",
-        contents=prompt,
-        config=genai.types.GenerateContentConfig(
-            system_instruction=GABIN_SYSTEM,
-            max_output_tokens=1024,
-        ),
+    url = (
+        "https://generativelanguage.googleapis.com/v1beta/models"
+        "/gemini-2.5-flash:generateContent"
+        f"?key={api_key}"
     )
-    return response.text
+    payload = {
+        "system_instruction": {"parts": [{"text": GABIN_SYSTEM}]},
+        "contents": [{"parts": [{"text": prompt}]}],
+        "generationConfig": {"maxOutputTokens": 1024},
+    }
+    resp = req.post(url, json=payload, timeout=30)
+    resp.raise_for_status()
+    return resp.json()["candidates"][0]["content"]["parts"][0]["text"]
 
 
 def _call_claude(prompt: str) -> str:

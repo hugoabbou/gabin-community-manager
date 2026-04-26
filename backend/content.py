@@ -77,16 +77,19 @@ def _parse_ai_response(raw: str) -> dict:
 
 
 def _call_gemini(prompt: str) -> str:
-    import google.generativeai as genai
+    from google import genai
     api_key = os.getenv("GEMINI_API_KEY", "")
     if not api_key:
         raise ValueError("GEMINI_API_KEY non configurée dans .env")
-    genai.configure(api_key=api_key)
-    model = genai.GenerativeModel(
-        "gemini-2.0-flash",
-        system_instruction=GABIN_SYSTEM,
+    client = genai.Client(api_key=api_key)
+    response = client.models.generate_content(
+        model="gemini-2.0-flash",
+        contents=prompt,
+        config=genai.types.GenerateContentConfig(
+            system_instruction=GABIN_SYSTEM,
+            max_output_tokens=1024,
+        ),
     )
-    response = model.generate_content(prompt)
     return response.text
 
 

@@ -1,6 +1,7 @@
 .env
 gabin.db
-generated/
+generated/*
+!generated/.gitkeep
 assets/library/
 __pycache__/
 *.pyc

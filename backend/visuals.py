@@ -4,10 +4,9 @@ from typing import Optional
 from PIL import Image, ImageDraw, ImageFont
 import numpy as np
 
-_base = os.getenv("DATA_DIR", os.path.dirname(os.path.dirname(__file__)))
-GENERATED_DIR = os.path.join(_base, "generated")
+GENERATED_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "generated")
 ASSETS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets")
-LIBRARY_DIR = os.path.join(_base, "library")
+LIBRARY_DIR = os.path.join(ASSETS_DIR, "library")
 
 LIBRARY_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
 

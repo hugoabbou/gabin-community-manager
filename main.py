@@ -24,9 +24,13 @@ from backend.visuals import get_library_images, LIBRARY_DIR
 from backend.social import publish_post
 
 BASE_DIR = os.path.dirname(__file__)
-DATA_DIR = os.getenv("DATA_DIR", BASE_DIR)
-GENERATED_DIR = os.path.join(DATA_DIR, "generated")
+GENERATED_DIR = os.path.join(BASE_DIR, "generated")
 ASSETS_DIR = os.path.join(BASE_DIR, "assets")
+
+# Create required directories before mounting
+os.makedirs(GENERATED_DIR, exist_ok=True)
+os.makedirs(ASSETS_DIR, exist_ok=True)
+os.makedirs(os.path.join(ASSETS_DIR, "library"), exist_ok=True)
 
 AVAILABLE_THEMES = [
     {"id": "sports_event",   "label": "Événement sportif",       "icon": "🏆"},
@@ -55,7 +59,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-os.makedirs(GENERATED_DIR, exist_ok=True)
 app.mount("/generated", StaticFiles(directory=GENERATED_DIR), name="generated")
 app.mount("/assets", StaticFiles(directory=ASSETS_DIR), name="assets")
 app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "frontend")), name="static")

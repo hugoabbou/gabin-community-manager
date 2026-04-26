@@ -3,8 +3,7 @@ import json
 import os
 from datetime import datetime
 
-_base = os.getenv("DATA_DIR", os.path.dirname(os.path.dirname(__file__)))
-DB_PATH = os.path.join(_base, "gabin.db")
+DB_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "gabin.db")
 
 
 def get_conn():

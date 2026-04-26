@@ -66,14 +66,52 @@ Réponds UNIQUEMENT avec le JSON, sans markdown ni explication."""
 
 
 def _parse_ai_response(raw: str) -> dict:
+    import re
     raw = raw.strip()
-    if raw.startswith("```"):
-        parts = raw.split("```")
-        raw = parts[1] if len(parts) > 1 else raw
-        if raw.startswith("json"):
-            raw = raw[4:]
-        raw = raw.strip()
-    return json.loads(raw)
+
+    # Strip markdown code fences
+    if "```" in raw:
+        match = re.search(r"```(?:json)?\s*([\s\S]*?)```", raw)
+        if match:
+            raw = match.group(1).strip()
+
+    # First attempt: direct parse
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError:
+        pass
+
+    # Second attempt: extract first {...} block
+    match = re.search(r"\{[\s\S]*\}", raw)
+    if match:
+        candidate = match.group(0)
+        try:
+            return json.loads(candidate)
+        except json.JSONDecodeError:
+            pass
+
+    # Third attempt: fix literal newlines inside string values
+    def fix_newlines(s):
+        return re.sub(
+            r'("(?:[^"\\]|\\.)*")',
+            lambda m: m.group(0).replace('\n', '\\n').replace('\r', ''),
+            s,
+        )
+    try:
+        return json.loads(fix_newlines(raw))
+    except json.JSONDecodeError:
+        pass
+
+    # Last resort: build a safe default from whatever text we got
+    lines = [l.strip() for l in raw.splitlines() if l.strip()]
+    return {
+        "hook": lines[0] if lines else "Chez Gabin ce soir 🍕",
+        "body": " ".join(lines[1:3]) if len(lines) > 1 else "",
+        "cta": "Réserve ta table !",
+        "hashtags": ["GabinRestaurant", "Pizza", "Asnières"],
+        "visual_title": lines[0] if lines else "GABIN",
+        "visual_subtitle": "",
+    }
 
 
 def _call_gemini(prompt: str) -> str:
@@ -89,7 +127,7 @@ def _call_gemini(prompt: str) -> str:
     payload = {
         "system_instruction": {"parts": [{"text": GABIN_SYSTEM}]},
         "contents": [{"parts": [{"text": prompt}]}],
-        "generationConfig": {"maxOutputTokens": 1024},
+        "generationConfig": {"maxOutputTokens": 2048, "temperature": 0.8},
     }
     resp = req.post(url, json=payload, timeout=30)
     resp.raise_for_status()

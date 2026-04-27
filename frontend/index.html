@@ -11,7 +11,7 @@
 
   <!-- Header -->
   <header class="header">
-    <div class="header-logo"><img src="/assets/logo.png" alt="Gabin"></div>
+    <div class="header-logo">g</div>
     <div>
       <div class="header h1" style="font-size:18px;font-weight:600">Gabin · Community Manager</div>
       <div class="sub" style="font-size:13px;color:var(--gray)">@gabinrestaurant · Asnières-sur-Seine</div>
@@ -160,7 +160,7 @@
             <div style="font-size:32px">📁</div>
             <p>Glisse tes photos ici ou clique pour importer<br><span style="font-size:12px;color:var(--gray2)">JPG, PNG, WEBP — Format stories recommandé (9:16)</span></p>
           </div>
-          <input type="file" id="fileInput" multiple accept=".jpg,.jpeg,.png,.webp" style="display:none" onchange="uploadFiles(this.files)">
+          <input type="file" id="fileInput" multiple accept=".jpg,.jpeg,.png,.webp" style="display:none" onchange="uploadFiles(this.files); this.value=''">
         </div>
         <div id="libraryGrid" class="library-grid"></div>
 

@@ -643,17 +643,34 @@ async function loadLibrary() {
 }
 
 async function uploadFiles(files) {
-  const formData = new FormData();
-  Array.from(files).forEach(f => formData.append("files", f));
-  const res = await fetch("/api/library/upload", {
-    method: "POST",
-    headers: { "Authorization": "Bearer " + TOKEN },
-    body: formData,
-  });
-  if (!res.ok) { toast("Erreur lors de l'upload"); return; }
-  const data = await res.json();
-  toast(`${data.uploaded.length} image(s) ajoutée(s)`);
-  loadLibrary();
+  if (!files || files.length === 0) return;
+  const zone = document.getElementById("uploadZone");
+  zone.style.opacity = "0.5";
+  zone.style.pointerEvents = "none";
+  try {
+    const formData = new FormData();
+    Array.from(files).forEach(f => formData.append("files", f));
+    const res = await fetch("/api/library/upload", {
+      method: "POST",
+      headers: { "Authorization": "Bearer " + TOKEN },
+      body: formData,
+    });
+    if (!res.ok) {
+      const err = await res.text();
+      toast("Erreur upload : " + res.status);
+      console.error("Upload error:", err);
+      return;
+    }
+    const data = await res.json();
+    toast(`${data.uploaded.length} image(s) ajoutée(s)`);
+    loadLibrary();
+  } catch (e) {
+    toast("Erreur réseau lors de l'upload");
+    console.error(e);
+  } finally {
+    zone.style.opacity = "";
+    zone.style.pointerEvents = "";
+  }
 }
 
 async function deleteLibrary(filename, evt) {

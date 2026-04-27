@@ -16,7 +16,8 @@ from backend.auth import authenticate, create_token, get_current_user
 from backend.db import (
     init_db, get_settings, update_setting, get_posts, get_post,
     delete_post, update_post_status, update_post_content, add_team,
-    get_teams, remove_team,
+    get_teams, remove_team, upsert_planned_events, get_planned_events,
+    set_event_selected, get_selected_events,
 )
 from backend.sports import get_all_upcoming, get_all_recent, search_team
 from backend.content import generate_post, regenerate_text
@@ -263,6 +264,27 @@ async def api_update_settings(data: dict = Body(...)):
     for key, value in data.items():
         update_setting(key, json.dumps(value) if not isinstance(value, str) else value)
     return {"ok": True}
+
+
+# ── Planning ──────────────────────────────────────────────────────────────────
+
+@api.get("/planning/{month}")
+async def api_get_planning(month: str):
+    from backend.sports import get_all_upcoming_for_month
+    events = get_all_upcoming_for_month(month)
+    upsert_planned_events(month, events)
+    return get_planned_events(month)
+
+
+@api.put("/planning/{event_id}/select")
+async def api_select_event(event_id: str, selected: bool = Body(...), notes: str = Body("")):
+    set_event_selected(event_id, selected, notes)
+    return {"ok": True}
+
+
+@api.get("/planning/{month}/selected")
+async def api_get_selected(month: str):
+    return get_selected_events(month)
 
 
 app.include_router(api)

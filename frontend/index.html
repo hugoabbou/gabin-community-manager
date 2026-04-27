@@ -81,6 +81,7 @@
         <button class="tab active" onclick="switchTab('generate')">Générer</button>
         <button class="tab" onclick="switchTab('queue')">File d'attente <span class="tab-badge" id="queueBadge" style="display:none">0</span></button>
         <button class="tab" onclick="switchTab('published')">Publié</button>
+        <button class="tab" onclick="switchTab('planning')">📅 Planning</button>
         <button class="tab" onclick="switchTab('library')">Bibliothèque</button>
         <button class="tab" onclick="switchTab('settings')">Réglages</button>
       </div>
@@ -123,6 +124,27 @@
             <div class="icon">🚀</div>
             <h3>Aucun post publié</h3>
             <p>Tes posts publiés apparaîtront ici.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB: Planning -->
+      <div id="tab-planning" style="display:none">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px">
+          <div>
+            <h2 style="font-size:16px;font-weight:600;margin-bottom:4px">Planning mensuel</h2>
+            <p style="font-size:13px;color:var(--gray)">Sélectionne les événements sur lesquels tu veux communiquer ce mois-ci.</p>
+          </div>
+          <div style="display:flex;gap:10px;align-items:center">
+            <input type="month" id="planningMonth" class="form-input" style="width:160px" onchange="loadPlanning()">
+            <button class="btn btn-primary btn-sm" onclick="loadPlanning()">Charger</button>
+          </div>
+        </div>
+        <div id="planningList" class="posts-grid">
+          <div class="empty-state">
+            <div class="icon">📅</div>
+            <h3>Sélectionne un mois</h3>
+            <p>Choisis le mois à planifier pour voir les événements disponibles.</p>
           </div>
         </div>
       </div>

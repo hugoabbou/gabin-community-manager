@@ -74,8 +74,76 @@ def init_db():
             team,
         )
 
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS planned_events (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            month TEXT NOT NULL,
+            event_id TEXT NOT NULL UNIQUE,
+            event_data TEXT NOT NULL,
+            selected INTEGER DEFAULT 0,
+            notes TEXT DEFAULT ''
+        )
+    """)
+
     conn.commit()
     conn.close()
+
+
+# --- Planned events ---
+
+def upsert_planned_events(month: str, events: list):
+    conn = get_conn()
+    c = conn.cursor()
+    for e in events:
+        c.execute("""
+            INSERT INTO planned_events (month, event_id, event_data)
+            VALUES (?, ?, ?)
+            ON CONFLICT(event_id) DO UPDATE SET event_data=excluded.event_data
+        """, (month, str(e.get("id", "")), json.dumps(e)))
+    conn.commit()
+    conn.close()
+
+
+def get_planned_events(month: str):
+    conn = get_conn()
+    c = conn.cursor()
+    c.execute("SELECT * FROM planned_events WHERE month = ? ORDER BY event_data", (month,))
+    rows = c.fetchall()
+    conn.close()
+    result = []
+    for r in rows:
+        d = dict(r)
+        d["event_data"] = json.loads(d["event_data"])
+        result.append(d)
+    return result
+
+
+def set_event_selected(event_id: str, selected: bool, notes: str = ""):
+    conn = get_conn()
+    c = conn.cursor()
+    c.execute(
+        "UPDATE planned_events SET selected=?, notes=? WHERE event_id=?",
+        (1 if selected else 0, notes, event_id),
+    )
+    conn.commit()
+    conn.close()
+
+
+def get_selected_events(month: str = None):
+    conn = get_conn()
+    c = conn.cursor()
+    if month:
+        c.execute("SELECT * FROM planned_events WHERE selected=1 AND month=?", (month,))
+    else:
+        c.execute("SELECT * FROM planned_events WHERE selected=1")
+    rows = c.fetchall()
+    conn.close()
+    result = []
+    for r in rows:
+        d = dict(r)
+        d["event_data"] = json.loads(d["event_data"])
+        result.append(d)
+    return result
 
 
 # --- Posts ---

@@ -42,6 +42,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   setHeaderDate();
   const user = localStorage.getItem("gabin_user");
   if (user) document.getElementById("headerUser").textContent = user;
+  initPlanningMonth();
   await Promise.all([loadThemes(), loadUpcomingEvents(), loadTeams(), loadSettings()]);
   await loadTabContent("queue");
   updateQueueBadge();
@@ -418,7 +419,7 @@ function esc(str) {
 function switchTab(tab) {
   state.currentTab = tab;
   document.querySelectorAll(".tab").forEach((el, i) => el.classList.remove("active"));
-  const tabs = ["generate", "queue", "published", "library", "settings"];
+  const tabs = ["generate", "queue", "published", "planning", "library", "settings"];
   tabs.forEach((t, i) => {
     const el = document.querySelectorAll(".tab")[i];
     if (el) el.classList.toggle("active", t === tab);
@@ -443,6 +444,8 @@ async function loadTabContent(tab) {
     document.getElementById("publishedPosts").innerHTML = posts.length
       ? posts.map(p => renderPostCard(p, "published")).join("")
       : emptyState("🚀", "Aucun post publié", "Tes posts publiés apparaîtront ici.");
+  } else if (tab === "planning") {
+    loadPlanning();
   } else if (tab === "library") {
     loadLibrary();
   }
@@ -534,6 +537,76 @@ async function saveEdit() {
   document.getElementById("editModal").style.display = "none";
   refreshCard(Number(id), {});
   toast("Contenu mis à jour ✓");
+}
+
+// ── Planning ──────────────────────────────────────────────────────────────────
+
+function initPlanningMonth() {
+  const d = new Date();
+  d.setMonth(d.getMonth() + 1);
+  const val = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  document.getElementById("planningMonth").value = val;
+}
+
+async function loadPlanning() {
+  const month = document.getElementById("planningMonth").value;
+  if (!month) return;
+  const container = document.getElementById("planningList");
+  container.innerHTML = `<div style="color:var(--gray);padding:20px">Chargement des événements…</div>`;
+
+  const events = await api("GET", `/api/planning/${month}`);
+  if (!events || events.length === 0) {
+    container.innerHTML = emptyState("🏆", "Aucun événement trouvé", "Aucun match prévu pour tes équipes ce mois-ci. Ajoute des équipes dans la sidebar.");
+    return;
+  }
+
+  // Group by sport
+  const bySport = {};
+  events.forEach(e => {
+    const sport = e.event_data?.sport || "Autre";
+    if (!bySport[sport]) bySport[sport] = [];
+    bySport[sport].push(e);
+  });
+
+  container.innerHTML = Object.entries(bySport).map(([sport, evts]) => `
+    <div style="margin-bottom:24px">
+      <h3 style="font-size:13px;font-weight:600;color:var(--gold);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:12px">
+        ${evts[0].event_data?.emoji || "🏆"} ${sport}
+      </h3>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        ${evts.map(e => renderPlanningCard(e)).join("")}
+      </div>
+    </div>
+  `).join("");
+}
+
+function renderPlanningCard(e) {
+  const ev = e.event_data;
+  const selected = e.selected === 1;
+  return `
+    <div id="plan-${e.event_id}" class="post-card" style="padding:14px;gap:14px;border-color:${selected ? "var(--gold)" : "var(--border)"}">
+      <div style="flex:1">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+          <span style="font-size:14px;font-weight:600;color:var(--white)">${esc(ev.name)}</span>
+        </div>
+        <div style="font-size:12px;color:var(--gray)">${ev.league} · ${ev.date_display} ${ev.time_display ? "à " + ev.time_display : ""}</div>
+        ${selected ? `<div style="font-size:12px;color:var(--gold);margin-top:4px">✓ Sélectionné pour communication</div>` : ""}
+      </div>
+      <div>
+        <button class="btn ${selected ? "btn-outline" : "btn-primary"} btn-sm"
+          onclick="togglePlanEvent('${e.event_id}', ${selected ? "false" : "true"})">
+          ${selected ? "✓ Sélectionné" : "+ Sélectionner"}
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+async function togglePlanEvent(eventId, selected) {
+  await api("PUT", `/api/planning/${eventId}/select`, { selected, notes: "" });
+  const month = document.getElementById("planningMonth").value;
+  loadPlanning();
+  toast(selected === true || selected === "true" ? "Événement ajouté au planning ✓" : "Événement retiré");
 }
 
 // ── Library ───────────────────────────────────────────────────────────────────

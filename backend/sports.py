@@ -111,6 +111,36 @@ def get_all_upcoming():
     return all_events
 
 
+def get_all_upcoming_for_month(month: str):
+    """Fetch all events for a given month (format: YYYY-MM) across all teams."""
+    from datetime import datetime
+    teams = get_teams()
+    all_events = []
+    seen_ids = set()
+
+    year, m = map(int, month.split("-"))
+    month_start = f"{year}-{m:02d}-01"
+    if m == 12:
+        month_end = f"{year+1}-01-01"
+    else:
+        month_end = f"{year}-{m+1:02d}-01"
+
+    for team in teams:
+        # Fetch next 15 events to increase chance of covering the full month
+        data = _get("eventsnext.php", {"id": team["external_id"]})
+        events = data.get("events") or []
+        for e in events:
+            date = e.get("dateEvent", "")
+            if month_start <= date < month_end:
+                parsed = _parse_event(e, team["name"], team["sport"])
+                if parsed["id"] not in seen_ids:
+                    seen_ids.add(parsed["id"])
+                    all_events.append(parsed)
+
+    all_events.sort(key=lambda e: e.get("date_raw", ""))
+    return all_events
+
+
 def get_all_recent():
     teams = get_teams()
     all_events = []

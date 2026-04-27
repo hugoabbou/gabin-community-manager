@@ -241,6 +241,30 @@ async def api_upload_library(files: List[UploadFile] = File(...)):
     return {"uploaded": uploaded}
 
 
+@api.get("/library/archive")
+async def api_get_archive():
+    from backend.visuals import LIBRARY_DIR, LIBRARY_EXTENSIONS
+    archive_dir = os.path.join(LIBRARY_DIR, "archive")
+    os.makedirs(archive_dir, exist_ok=True)
+    images = []
+    for f in sorted(os.listdir(archive_dir)):
+        if os.path.splitext(f)[1].lower() in LIBRARY_EXTENSIONS:
+            images.append({"filename": f, "url": f"assets/library/archive/{f}"})
+    return images
+
+
+@api.post("/library/archive/{filename}/restore")
+async def api_restore_archive(filename: str):
+    from backend.visuals import LIBRARY_DIR
+    archive_dir = os.path.join(LIBRARY_DIR, "archive")
+    src = os.path.join(archive_dir, filename)
+    dst = os.path.join(LIBRARY_DIR, filename)
+    if not os.path.exists(src):
+        raise HTTPException(status_code=404, detail="Fichier introuvable")
+    shutil.move(src, dst)
+    return {"ok": True}
+
+
 @api.delete("/library/{filename}")
 async def api_delete_library(filename: str):
     path = os.path.join(LIBRARY_DIR, filename)

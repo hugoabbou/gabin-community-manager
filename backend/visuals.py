@@ -47,10 +47,11 @@ def _load_font(size: int, bold: bool = False) -> ImageFont.FreeTypeFont:
 
 
 def get_library_images() -> list:
-    """Return all images in the visual library."""
     os.makedirs(LIBRARY_DIR, exist_ok=True)
     images = []
     for f in sorted(os.listdir(LIBRARY_DIR)):
+        if f == "archive":
+            continue
         if os.path.splitext(f)[1].lower() in LIBRARY_EXTENSIONS:
             images.append({
                 "filename": f,
@@ -60,20 +61,29 @@ def get_library_images() -> list:
     return images
 
 
-def _pick_library_bg(themes: list = None) -> Optional[Image.Image]:
-    """Pick a random image from the library to use as background."""
+def _pick_library_bg(themes: list = None) -> tuple[Optional[Image.Image], Optional[str]]:
+    """Pick a random image from the library. Returns (image, source_path) or (None, None)."""
     import random
     images = get_library_images()
     if not images:
-        return None
+        return None, None
     chosen = random.choice(images)
     img = Image.open(chosen["path"]).convert("RGB")
     img = img.resize((STORY_W, STORY_H), Image.LANCZOS)
-    # Dark overlay so text remains readable
     overlay = Image.new("RGBA", img.size, (0, 0, 0, 185))
     result = img.convert("RGBA")
     result = Image.alpha_composite(result, overlay)
-    return result.convert("RGB")
+    return result.convert("RGB"), chosen["path"]
+
+
+def _archive_library_image(path: str):
+    """Move a used library image to the archive subfolder."""
+    import shutil
+    archive_dir = os.path.join(LIBRARY_DIR, "archive")
+    os.makedirs(archive_dir, exist_ok=True)
+    dest = os.path.join(archive_dir, os.path.basename(path))
+    if os.path.exists(path):
+        shutil.move(path, dest)
 
 
 def _gradient_bg(width: int, height: int) -> Image.Image:
@@ -152,7 +162,7 @@ def create_story_image(
     sport_name = sport_event.get("sport", "Football") if sport_event else "Football"
     accent_color = SPORT_COLORS.get(sport_name, COLOR_GOLD) if is_sport else COLOR_GOLD
 
-    library_img = _pick_library_bg(themes)
+    library_img, library_src = _pick_library_bg(themes)
     img = library_img if library_img is not None else _gradient_bg(STORY_W, STORY_H)
     draw = ImageDraw.Draw(img)
 
@@ -250,4 +260,8 @@ def create_story_image(
     filename = f"story_{uuid.uuid4().hex[:8]}.png"
     path = os.path.join(GENERATED_DIR, filename)
     img.save(path, "PNG", quality=95)
+
+    if library_src:
+        _archive_library_image(library_src)
+
     return f"generated/{filename}"

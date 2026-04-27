@@ -11,7 +11,7 @@
 
   <!-- Header -->
   <header class="header">
-    <div class="header-logo">g</div>
+    <div class="header-logo"><img src="/assets/logo.png" alt="Gabin"></div>
     <div>
       <div class="header h1" style="font-size:18px;font-weight:600">Gabin · Community Manager</div>
       <div class="sub" style="font-size:13px;color:var(--gray)">@gabinrestaurant · Asnières-sur-Seine</div>
@@ -163,6 +163,12 @@
           <input type="file" id="fileInput" multiple accept=".jpg,.jpeg,.png,.webp" style="display:none" onchange="uploadFiles(this.files)">
         </div>
         <div id="libraryGrid" class="library-grid"></div>
+
+        <div style="margin-top:32px;padding-top:24px;border-top:1px solid var(--border)">
+          <h3 style="font-size:14px;font-weight:600;margin-bottom:4px;color:var(--gray)">Archive</h3>
+          <p style="font-size:12px;color:var(--gray2);margin-bottom:16px">Photos déjà utilisées — restaure-les pour les réutiliser.</p>
+          <div id="archiveGrid" class="library-grid"></div>
+        </div>
       </div>
 
       <!-- TAB: Settings -->

@@ -611,7 +611,11 @@ async function togglePlanEvent(eventId, selected) {
 
 // ── Library ───────────────────────────────────────────────────────────────────
 async function loadLibrary() {
-  const images = await api("GET", "/api/library");
+  const [images, archived] = await Promise.all([
+    api("GET", "/api/library"),
+    api("GET", "/api/library/archive"),
+  ]);
+
   const grid = document.getElementById("libraryGrid");
   grid.innerHTML = images.length
     ? images.map(img => `
@@ -623,14 +627,32 @@ async function loadLibrary() {
         </div>
       `).join("")
     : '<div style="color:var(--gray);font-size:14px">Aucune image dans la bibliothèque</div>';
+
+  const archiveGrid = document.getElementById("archiveGrid");
+  archiveGrid.innerHTML = archived.length
+    ? archived.map(img => `
+        <div class="library-item">
+          <img src="/${img.url}" alt="${img.filename}" loading="lazy"
+               onclick="openLightbox('/${img.url}')" style="opacity:0.6">
+          <button class="lib-del" style="background:var(--gold);color:#000"
+                  onclick="restoreArchive('${img.filename}', event)">↩</button>
+          <div class="lib-name">${img.filename}</div>
+        </div>
+      `).join("")
+    : '<div style="color:var(--gray2);font-size:13px">Aucune photo archivée</div>';
 }
 
 async function uploadFiles(files) {
   const formData = new FormData();
   Array.from(files).forEach(f => formData.append("files", f));
-  const res = await fetch("/api/library/upload", { method: "POST", body: formData });
+  const res = await fetch("/api/library/upload", {
+    method: "POST",
+    headers: { "Authorization": "Bearer " + TOKEN },
+    body: formData,
+  });
+  if (!res.ok) { toast("Erreur lors de l'upload"); return; }
   const data = await res.json();
-  toast(`${data.uploaded.length} image(s) ajoutée(s) 📷`);
+  toast(`${data.uploaded.length} image(s) ajoutée(s)`);
   loadLibrary();
 }
 
@@ -639,6 +661,13 @@ async function deleteLibrary(filename, evt) {
   await api("DELETE", `/api/library/${filename}`);
   loadLibrary();
   toast("Image supprimée");
+}
+
+async function restoreArchive(filename, evt) {
+  evt.stopPropagation();
+  await api("POST", `/api/library/archive/${filename}/restore`);
+  loadLibrary();
+  toast("Photo restaurée dans la bibliothèque");
 }
 
 // Drag & drop on upload zone

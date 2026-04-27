@@ -418,11 +418,10 @@ function esc(str) {
 // ── Tab management ────────────────────────────────────────────────────────────
 function switchTab(tab) {
   state.currentTab = tab;
-  document.querySelectorAll(".tab").forEach((el, i) => el.classList.remove("active"));
-  const tabs = ["generate", "queue", "published", "planning", "library", "settings"];
-  tabs.forEach((t, i) => {
-    const el = document.querySelectorAll(".tab")[i];
-    if (el) el.classList.toggle("active", t === tab);
+  document.querySelectorAll(".tab").forEach(el => {
+    el.classList.toggle("active", el.getAttribute("onclick") === `switchTab('${tab}')`);
+  });
+  ["generate", "queue", "published", "planning", "library", "settings"].forEach(t => {
     const panel = document.getElementById(`tab-${t}`);
     if (panel) panel.style.display = t === tab ? "" : "none";
   });
@@ -663,6 +662,7 @@ async function uploadFiles(files) {
     }
     const data = await res.json();
     toast(`${data.uploaded.length} image(s) ajoutée(s)`);
+    document.getElementById("fileInput").value = "";
     loadLibrary();
   } catch (e) {
     toast("Erreur réseau lors de l'upload");

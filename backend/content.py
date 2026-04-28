@@ -120,17 +120,17 @@ def _call_gemini(prompt: str) -> str:
     api_key = os.getenv("GEMINI_API_KEY", "")
     if not api_key:
         raise ValueError("GEMINI_API_KEY non configurée dans .env")
-    url = (
-        "https://generativelanguage.googleapis.com/v1beta/models"
-        "/gemini-2.5-flash:generateContent"
-        f"?key={api_key}"
-    )
+    base_url = "https://generativelanguage.googleapis.com/v1beta/models"
     payload = {
         "system_instruction": {"parts": [{"text": GABIN_SYSTEM}]},
         "contents": [{"parts": [{"text": prompt}]}],
         "generationConfig": {"maxOutputTokens": 2048, "temperature": 0.8},
     }
-    resp = req.post(url, json=payload, timeout=30)
+    for model in ["gemini-2.5-flash", "gemini-2.0-flash"]:
+        url = f"{base_url}/{model}:generateContent?key={api_key}"
+        resp = req.post(url, json=payload, timeout=30)
+        if resp.status_code < 500:
+            break
     resp.raise_for_status()
     return resp.json()["candidates"][0]["content"]["parts"][0]["text"]
 

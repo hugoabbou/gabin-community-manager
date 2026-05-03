@@ -7,8 +7,12 @@ import numpy as np
 _PROJECT_ROOT = os.path.dirname(os.path.dirname(__file__))
 GENERATED_DIR = os.path.join(_PROJECT_ROOT, "generated")
 ASSETS_DIR = os.path.join(_PROJECT_ROOT, "assets")
-# Sur Render, DATA_DIR pointe vers le disque persistant — les photos y survivent aux redémarrages.
-_DATA_ROOT = os.getenv("DATA_DIR", ASSETS_DIR)
+# Sur Render, DATA_DIR pointe vers le disque persistant — uniquement si le disque est bien monté.
+_DATA_ROOT_env = os.getenv("DATA_DIR", "")
+if _DATA_ROOT_env and os.path.isdir(os.path.dirname(_DATA_ROOT_env.rstrip("/")) or "/"):
+    _DATA_ROOT = _DATA_ROOT_env
+else:
+    _DATA_ROOT = ASSETS_DIR
 LIBRARY_DIR = os.path.join(_DATA_ROOT, "library")
 
 LIBRARY_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}

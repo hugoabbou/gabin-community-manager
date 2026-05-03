@@ -4,9 +4,12 @@ import os
 from datetime import datetime
 
 _PROJECT_ROOT = os.path.dirname(os.path.dirname(__file__))
-# Sur Render, DATA_DIR pointe vers le disque persistant (/app/data).
-# En local, on utilise la racine du projet.
-_DATA_ROOT = os.getenv("DATA_DIR", _PROJECT_ROOT)
+# Sur Render, DATA_DIR pointe vers le disque persistant — uniquement si le disque est bien monté.
+_DATA_ROOT_env = os.getenv("DATA_DIR", "")
+if _DATA_ROOT_env and os.path.isdir(os.path.dirname(_DATA_ROOT_env.rstrip("/")) or "/"):
+    _DATA_ROOT = _DATA_ROOT_env
+else:
+    _DATA_ROOT = _PROJECT_ROOT
 DB_PATH = os.path.join(_DATA_ROOT, "gabin.db")
 
 

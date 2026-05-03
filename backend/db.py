@@ -3,7 +3,11 @@ import json
 import os
 from datetime import datetime
 
-DB_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "gabin.db")
+_PROJECT_ROOT = os.path.dirname(os.path.dirname(__file__))
+# Sur Render, DATA_DIR pointe vers le disque persistant (/app/data).
+# En local, on utilise la racine du projet.
+_DATA_ROOT = os.getenv("DATA_DIR", _PROJECT_ROOT)
+DB_PATH = os.path.join(_DATA_ROOT, "gabin.db")
 
 
 def get_conn():

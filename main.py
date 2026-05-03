@@ -31,7 +31,7 @@ ASSETS_DIR = os.path.join(BASE_DIR, "assets")
 # Create required directories before mounting
 os.makedirs(GENERATED_DIR, exist_ok=True)
 os.makedirs(ASSETS_DIR, exist_ok=True)
-os.makedirs(os.path.join(ASSETS_DIR, "library"), exist_ok=True)
+os.makedirs(LIBRARY_DIR, exist_ok=True)
 
 AVAILABLE_THEMES = [
     {"id": "sports_event",   "label": "Événement sportif",       "icon": "🏆"},
@@ -61,6 +61,8 @@ app.add_middleware(
 )
 
 app.mount("/generated", StaticFiles(directory=GENERATED_DIR), name="generated")
+# /assets/library doit être monté avant /assets pour pointer vers le bon répertoire (DATA_DIR)
+app.mount("/assets/library", StaticFiles(directory=LIBRARY_DIR), name="library")
 app.mount("/assets", StaticFiles(directory=ASSETS_DIR), name="assets")
 app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "frontend")), name="static")
 

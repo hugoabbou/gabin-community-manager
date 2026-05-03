@@ -9,7 +9,9 @@ services:
         value: 3.11.0
       - key: AI_PROVIDER
         value: gemini
+      - key: DATA_DIR
+        value: /app/data
     disk:
-      name: library
-      mountPath: /app/assets/library
+      name: data
+      mountPath: /app/data
       sizeGB: 1

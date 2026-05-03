@@ -4,9 +4,12 @@ from typing import Optional
 from PIL import Image, ImageDraw, ImageFont
 import numpy as np
 
-GENERATED_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "generated")
-ASSETS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets")
-LIBRARY_DIR = os.path.join(ASSETS_DIR, "library")
+_PROJECT_ROOT = os.path.dirname(os.path.dirname(__file__))
+GENERATED_DIR = os.path.join(_PROJECT_ROOT, "generated")
+ASSETS_DIR = os.path.join(_PROJECT_ROOT, "assets")
+# Sur Render, DATA_DIR pointe vers le disque persistant — les photos y survivent aux redémarrages.
+_DATA_ROOT = os.getenv("DATA_DIR", ASSETS_DIR)
+LIBRARY_DIR = os.path.join(_DATA_ROOT, "library")
 
 LIBRARY_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
 

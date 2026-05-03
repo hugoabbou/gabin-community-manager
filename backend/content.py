@@ -1,8 +1,7 @@
 import os
 import json
-import random
 from backend.db import create_post, get_settings
-from backend.visuals import get_library_images
+from backend.visuals import get_library_images, create_story_image
 from backend.sports import get_all_upcoming
 
 GABIN_SYSTEM = """Tu es le community manager de Gabin, une pizzeria napolitaine à Asnières-sur-Seine avec 10 800 abonnés Instagram.
@@ -184,10 +183,18 @@ async def generate_post(
     visual_title = data.get("visual_title", hook)
     visual_subtitle = data.get("visual_subtitle", "")
 
-    # Pick a random image from the library
+    # Generate composite story image with text overlaid on a library photo
     library = get_library_images()
     if library:
-        image_path = random.choice(library)["url"]
+        image_path = create_story_image(
+            title=visual_title,
+            subtitle=visual_subtitle,
+            body=body,
+            cta=cta,
+            hashtags=hashtags,
+            sport_event=event,
+            themes=themes,
+        )
     else:
         image_path = None
 

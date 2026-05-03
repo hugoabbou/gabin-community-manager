@@ -138,7 +138,7 @@ async function loadTeams() {
 function renderTeams(teams) {
   const container = document.getElementById("teamList");
   if (!teams || teams.length === 0) {
-    container.innerHTML = '<div style="color:var(--gray);font-size:13px">Aucune compétition configurée</div>';
+    container.innerHTML = '<div style="color:var(--gray);font-size:13px">Aucune compétition</div>';
     return;
   }
   // Grouper par sport

@@ -69,27 +69,23 @@ def init_db():
     for key, value in defaults.items():
         c.execute("INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)", (key, value))
 
-    # Supprimer les anciennes équipes par défaut (remplacées par les compétitions)
-    old_defaults = ["133604", "133739", "133600", "133601"]
-    for eid in old_defaults:
+    # Supprimer les entrées obsolètes (anciennes équipes + nolive sans données API)
+    obsolete_ids = [
+        "133604", "133739", "133600", "133601",  # anciennes équipes
+        "nolive_coupe_france", "nolive_euro_foot", "nolive_cdm_foot",
+        "nolive_six_nations", "nolive_cdm_rugby", "nolive_roland_garros",
+        "nolive_24h_mans", "nolive_tour_france",
+    ]
+    for eid in obsolete_ids:
         c.execute("DELETE FROM teams WHERE external_id = ?", (eid,))
 
-    # Compétitions françaises par défaut
+    # Compétitions françaises actives (données live disponibles toute l'année)
     # (name, sport, external_id, badge_url, tracking_type, emoji)
-    # external_id "nolive_*" = pas de données live API, utilisé comme contexte uniquement
     default_competitions = [
-        ("Ligue 1",                 "Football",   "4334",               "", "league", "⚽"),
-        ("Ligue des Champions",     "Football",   "4480",               "", "league", "⚽"),
-        ("Coupe de France",         "Football",   "nolive_coupe_france","", "league", "⚽"),
-        ("Euro de Football",        "Football",   "nolive_euro_foot",   "", "league", "⚽"),
-        ("Coupe du Monde Football", "Football",   "nolive_cdm_foot",    "", "league", "⚽"),
-        ("Top 14",                  "Rugby",      "4430",               "", "league", "🏉"),
-        ("Tournoi des 6 Nations",   "Rugby",      "nolive_six_nations", "", "league", "🏉"),
-        ("Coupe du Monde Rugby",    "Rugby",      "nolive_cdm_rugby",   "", "league", "🏉"),
-        ("Roland Garros",           "Tennis",     "nolive_roland_garros","","league", "🎾"),
-        ("Formula 1",               "Motorsport", "4370",               "", "league", "🏎️"),
-        ("24 Heures du Mans",       "Motorsport", "nolive_24h_mans",    "", "league", "🏁"),
-        ("Tour de France",          "Cyclisme",   "nolive_tour_france", "", "league", "🚴"),
+        ("Ligue 1",             "Football",   "4334", "", "league", "⚽"),
+        ("Ligue des Champions", "Football",   "4480", "", "league", "⚽"),
+        ("Top 14",              "Rugby",      "4430", "", "league", "🏉"),
+        ("Formula 1",           "Motorsport", "4370", "", "league", "🏎️"),
     ]
     for comp in default_competitions:
         c.execute(

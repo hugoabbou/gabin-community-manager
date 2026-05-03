@@ -137,13 +137,29 @@ async function loadTeams() {
 
 function renderTeams(teams) {
   const container = document.getElementById("teamList");
-  container.innerHTML = teams.map(t => `
-    <div class="team-item">
-      <span>${t.name}</span>
-      <span class="sport-badge">${t.sport}</span>
-      <button class="team-remove" onclick="removeTeam(${t.id}, event)" title="Retirer">×</button>
+  if (!teams || teams.length === 0) {
+    container.innerHTML = '<div style="color:var(--gray);font-size:13px">Aucune compétition configurée</div>';
+    return;
+  }
+  // Grouper par sport
+  const bySport = {};
+  teams.forEach(t => {
+    const sport = t.sport || "Autre";
+    if (!bySport[sport]) bySport[sport] = [];
+    bySport[sport].push(t);
+  });
+  container.innerHTML = Object.entries(bySport).map(([sport, list]) => `
+    <div style="margin-bottom:8px">
+      <div style="font-size:10px;color:var(--gray2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">${sport}</div>
+      ${list.map(t => `
+        <div class="team-item">
+          <span style="margin-right:4px">${t.emoji || ""}</span>
+          <span style="flex:1">${t.name}</span>
+          <button class="team-remove" onclick="removeTeam(${t.id}, event)" title="Retirer">×</button>
+        </div>
+      `).join("")}
     </div>
-  `).join("") || '<div style="color:var(--gray);font-size:13px">Aucune équipe configurée</div>';
+  `).join("");
 }
 
 async function removeTeam(id, evt) {
@@ -151,7 +167,7 @@ async function removeTeam(id, evt) {
   await api("DELETE", `/api/sports/teams/${id}`);
   loadTeams();
   loadUpcomingEvents();
-  toast("Équipe retirée");
+  toast("Retiré");
 }
 
 async function searchTeams() {

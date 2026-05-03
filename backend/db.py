@@ -40,9 +40,17 @@ def init_db():
             sport TEXT NOT NULL,
             external_id TEXT NOT NULL UNIQUE,
             badge_url TEXT,
-            active INTEGER DEFAULT 1
+            active INTEGER DEFAULT 1,
+            tracking_type TEXT DEFAULT 'team',
+            emoji TEXT DEFAULT ''
         )
     """)
+    # Migrations pour DBs existantes
+    for col, defval in [("tracking_type", "'team'"), ("emoji", "''")]:
+        try:
+            c.execute(f"ALTER TABLE teams ADD COLUMN {col} TEXT DEFAULT {defval}")
+        except Exception:
+            pass
 
     c.execute("""
         CREATE TABLE IF NOT EXISTS settings (
@@ -61,17 +69,33 @@ def init_db():
     for key, value in defaults.items():
         c.execute("INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)", (key, value))
 
-    # Default teams
-    default_teams = [
-        ("Paris Saint-Germain", "Football", "133604", "https://www.thesportsdb.com/images/media/team/badge/xzqdr11517660252.png"),
-        ("Équipe de France", "Football", "133739", "https://www.thesportsdb.com/images/media/team/badge/sqxqrs1419536840.png"),
-        ("AS Monaco", "Football", "133600", ""),
-        ("Olympique de Marseille", "Football", "133601", ""),
+    # Supprimer les anciennes équipes par défaut (remplacées par les compétitions)
+    old_defaults = ["133604", "133739", "133600", "133601"]
+    for eid in old_defaults:
+        c.execute("DELETE FROM teams WHERE external_id = ?", (eid,))
+
+    # Compétitions françaises par défaut
+    # (name, sport, external_id, badge_url, tracking_type, emoji)
+    # external_id "nolive_*" = pas de données live API, utilisé comme contexte uniquement
+    default_competitions = [
+        ("Ligue 1",                 "Football",   "4334",               "", "league", "⚽"),
+        ("Ligue des Champions",     "Football",   "4480",               "", "league", "⚽"),
+        ("Coupe de France",         "Football",   "nolive_coupe_france","", "league", "⚽"),
+        ("Euro de Football",        "Football",   "nolive_euro_foot",   "", "league", "⚽"),
+        ("Coupe du Monde Football", "Football",   "nolive_cdm_foot",    "", "league", "⚽"),
+        ("Top 14",                  "Rugby",      "4430",               "", "league", "🏉"),
+        ("Tournoi des 6 Nations",   "Rugby",      "nolive_six_nations", "", "league", "🏉"),
+        ("Coupe du Monde Rugby",    "Rugby",      "nolive_cdm_rugby",   "", "league", "🏉"),
+        ("Roland Garros",           "Tennis",     "nolive_roland_garros","","league", "🎾"),
+        ("Formula 1",               "Motorsport", "4370",               "", "league", "🏎️"),
+        ("24 Heures du Mans",       "Motorsport", "nolive_24h_mans",    "", "league", "🏁"),
+        ("Tour de France",          "Cyclisme",   "nolive_tour_france", "", "league", "🚴"),
     ]
-    for team in default_teams:
+    for comp in default_competitions:
         c.execute(
-            "INSERT OR IGNORE INTO teams (name, sport, external_id, badge_url) VALUES (?, ?, ?, ?)",
-            team,
+            """INSERT OR IGNORE INTO teams (name, sport, external_id, badge_url, tracking_type, emoji)
+               VALUES (?, ?, ?, ?, ?, ?)""",
+            comp,
         )
 
     c.execute("""
@@ -253,12 +277,13 @@ def get_teams():
     return [dict(r) for r in rows]
 
 
-def add_team(name, sport, external_id, badge_url=""):
+def add_team(name, sport, external_id, badge_url="", tracking_type="team", emoji=""):
     conn = get_conn()
     c = conn.cursor()
     c.execute(
-        "INSERT OR REPLACE INTO teams (name, sport, external_id, badge_url) VALUES (?, ?, ?, ?)",
-        (name, sport, external_id, badge_url),
+        """INSERT OR REPLACE INTO teams (name, sport, external_id, badge_url, tracking_type, emoji)
+           VALUES (?, ?, ?, ?, ?, ?)""",
+        (name, sport, external_id, badge_url, tracking_type, emoji),
     )
     team_id = c.lastrowid
     conn.commit()

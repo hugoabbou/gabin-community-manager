@@ -10,6 +10,8 @@ SPORT_EMOJIS = {
     "Tennis": "🎾",
     "Basketball": "🏀",
     "Rugby": "🏉",
+    "Motorsport": "🏎️",
+    "Cyclisme": "🚴",
     "default": "🏆",
 }
 
@@ -83,15 +85,29 @@ def _parse_event(event: dict, team_name: str, sport: str) -> dict:
     }
 
 
-def get_team_upcoming(external_id: str, team_name: str, sport: str):
-    data = _get("eventsnext.php", {"id": external_id})
-    events = data.get("events") or []
+def _is_live(external_id: str) -> bool:
+    return bool(external_id) and not external_id.startswith("nolive_")
+
+
+def get_team_upcoming(external_id: str, team_name: str, sport: str, tracking_type: str = "team"):
+    if not _is_live(external_id):
+        return []
+    if tracking_type == "league":
+        data = _get("eventsnextleague.php", {"id": external_id})
+    else:
+        data = _get("eventsnext.php", {"id": external_id})
+    events = (data.get("events") or [])[:15]
     return [_parse_event(e, team_name, sport) for e in events]
 
 
-def get_team_last(external_id: str, team_name: str, sport: str):
-    data = _get("eventslast.php", {"id": external_id})
-    events = data.get("events") or []
+def get_team_last(external_id: str, team_name: str, sport: str, tracking_type: str = "team"):
+    if not _is_live(external_id):
+        return []
+    if tracking_type == "league":
+        data = _get("eventspastleague.php", {"id": external_id})
+    else:
+        data = _get("eventslast.php", {"id": external_id})
+    events = (data.get("events") or [])[:10]
     return [_parse_event(e, team_name, sport) for e in events]
 
 
@@ -101,7 +117,10 @@ def get_all_upcoming():
     seen_ids = set()
 
     for team in teams:
-        events = get_team_upcoming(team["external_id"], team["name"], team["sport"])
+        events = get_team_upcoming(
+            team["external_id"], team["name"], team["sport"],
+            team.get("tracking_type", "team"),
+        )
         for event in events:
             if event["id"] not in seen_ids:
                 seen_ids.add(event["id"])
@@ -126,8 +145,13 @@ def get_all_upcoming_for_month(month: str):
         month_end = f"{year}-{m+1:02d}-01"
 
     for team in teams:
-        # Fetch next 15 events to increase chance of covering the full month
-        data = _get("eventsnext.php", {"id": team["external_id"]})
+        if not _is_live(team["external_id"]):
+            continue
+        tracking_type = team.get("tracking_type", "team")
+        if tracking_type == "league":
+            data = _get("eventsnextleague.php", {"id": team["external_id"]})
+        else:
+            data = _get("eventsnext.php", {"id": team["external_id"]})
         events = data.get("events") or []
         for e in events:
             date = e.get("dateEvent", "")
@@ -147,7 +171,10 @@ def get_all_recent():
     seen_ids = set()
 
     for team in teams:
-        events = get_team_last(team["external_id"], team["name"], team["sport"])
+        events = get_team_last(
+            team["external_id"], team["name"], team["sport"],
+            team.get("tracking_type", "team"),
+        )
         for event in events:
             if event["id"] not in seen_ids:
                 seen_ids.add(event["id"])

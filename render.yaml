@@ -10,6 +10,6 @@ services:
       - key: AI_PROVIDER
         value: gemini
     disk:
-      name: data
-      mountPath: /app/data
+      name: library
+      mountPath: /app/assets/library
       sizeGB: 1

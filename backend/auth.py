@@ -13,10 +13,12 @@ TOKEN_EXPIRE_HOURS = 24 * 7  # 7 days
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 bearer_scheme = HTTPBearer(auto_error=False)
 
-USERS = {
+_raw_users = {
     os.getenv("USER1_USERNAME", "hugo"): os.getenv("USER1_PASSWORD_HASH", ""),
     os.getenv("USER2_USERNAME", "equipe"): os.getenv("USER2_PASSWORD_HASH", ""),
+    os.getenv("USER3_USERNAME", ""): os.getenv("USER3_PASSWORD_HASH", ""),
 }
+USERS = {k: v for k, v in _raw_users.items() if k}
 
 
 def verify_password(plain: str, hashed: str) -> bool:

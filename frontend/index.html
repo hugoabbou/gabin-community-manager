@@ -94,8 +94,7 @@
             <input type="text" id="customContext" class="custom-input"
               placeholder="Contexte additionnel : ex. 'On a un nouveau burger cette semaine'…">
             <div class="platform-toggles">
-              <button class="platform-btn active" id="pltInsta" onclick="togglePlatform('instagram')">📸 Instagram</button>
-              <button class="platform-btn active" id="pltFb" onclick="togglePlatform('facebook')">👤 Facebook</button>
+              <button class="platform-btn active" id="pltInsta">📸 Instagram</button>
             </div>
             <button class="btn btn-primary" id="generateBtn" onclick="generate()">
               <span>✨ Générer</span>
@@ -199,11 +198,12 @@
             <span id="apiStatus" style="font-size:12px;color:var(--gray)">—</span>
           </div>
           <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:16px">
-            <div style="font-size:13px;font-weight:600;margin-bottom:8px">📱 Configuration Meta API</div>
-            <div style="font-size:13px;color:var(--gray);line-height:1.7">
-              Pour connecter Instagram et Facebook, configure les variables dans ton fichier <code style="background:var(--bg);padding:1px 5px;border-radius:3px">.env</code> :<br>
-              <code>FACEBOOK_ACCESS_TOKEN</code>, <code>INSTAGRAM_BUSINESS_ACCOUNT_ID</code>, <code>FACEBOOK_PAGE_ID</code><br><br>
-              <a href="https://developers.facebook.com/docs/instagram-api" target="_blank" style="color:var(--gold)">→ Documentation Meta API</a>
+            <div style="font-size:13px;font-weight:600;margin-bottom:8px">📱 Connexion Instagram</div>
+            <div style="font-size:13px;color:var(--gray);line-height:1.8">
+              Configure ces deux variables dans <strong>Render → Environment</strong> :<br>
+              <code style="background:var(--bg);padding:1px 6px;border-radius:3px">INSTAGRAM_ACCESS_TOKEN</code> — token d'accès Meta<br>
+              <code style="background:var(--bg);padding:1px 6px;border-radius:3px">INSTAGRAM_ACCOUNT_ID</code> — ID numérique de ton compte Instagram Business<br><br>
+              <span id="instaStatus" style="font-size:12px"></span>
             </div>
           </div>
         </div>

@@ -31,7 +31,7 @@ const state = {
   themes: [],
   activeThemes: new Set(),
   selectedEvent: null,
-  platforms: new Set(["instagram", "facebook"]),
+  platforms: new Set(["instagram"]),
   requireValidation: true,
   generatedPosts: [],
   currentTab: "generate",
@@ -209,7 +209,15 @@ async function addTeam(jsonStr) {
 
 // ── Settings ──────────────────────────────────────────────────────────────────
 async function loadSettings() {
-  const s = await api("GET", "/api/settings");
+  const [s, instaStatus] = await Promise.all([
+    api("GET", "/api/settings"),
+    api("GET", "/api/instagram/status"),
+  ]);
+  const el = document.getElementById("instaStatus");
+  if (el) {
+    el.textContent = instaStatus.configured ? "✓ Connecté" : "⚠ Non configuré — ajoute les variables dans Render";
+    el.style.color = instaStatus.configured ? "var(--gold)" : "var(--gray)";
+  }
   const autoPublish = String(s.auto_publish).toLowerCase() === "true";
   state.requireValidation = !autoPublish;
   document.getElementById("requireValidation").checked = state.requireValidation;
@@ -250,7 +258,7 @@ function saveDailyTime() {
 
 // ── Platform toggles ──────────────────────────────────────────────────────────
 function togglePlatform(platform) {
-  const btn = document.getElementById(platform === "instagram" ? "pltInsta" : "pltFb");
+  const btn = document.getElementById("pltInsta");
   if (state.platforms.has(platform)) {
     if (state.platforms.size > 1) {
       state.platforms.delete(platform);
@@ -353,7 +361,7 @@ function buildActions(p, context) {
       <div style="display:flex;gap:10px;flex-wrap:wrap">
         <button class="btn btn-primary" onclick="sharePost('${imgSrc}', ${p.id})"
           style="font-size:15px;padding:12px 24px;flex:1;min-width:180px">
-          📤 Partager sur Instagram / Facebook
+          📤 Publier sur Instagram
         </button>
         <button class="btn btn-outline btn-sm" onclick="copyCaption(${p.id})" style="padding:12px 18px">
           📋 Copier la légende
@@ -413,7 +421,7 @@ async function copyCaption(postId) {
   if (Array.isArray(post.hashtags)) parts.push(post.hashtags.map(h => `#${h}`).join(" "));
   const text = parts.filter(Boolean).join("\n\n");
   await navigator.clipboard.writeText(text);
-  toast("Légende copiée 📋 — colle-la dans Instagram après avoir posté la photo");
+  toast("Légende copiée 📋 — colle-la dans Instagram");
 }
 
 async function downloadPost(imgSrc, postId) {

@@ -143,7 +143,7 @@ class GenerateRequest(BaseModel):
     themes: List[str]
     event_id: Optional[str] = None
     custom_context: Optional[str] = None
-    platforms: List[str] = ["instagram", "facebook"]
+    platforms: List[str] = ["instagram"]
 
 
 @api.post("/generate")
@@ -209,6 +209,14 @@ async def api_update_post(post_id: int, data: dict = Body(...)):
 async def api_delete_post(post_id: int):
     delete_post(post_id)
     return {"ok": True}
+
+
+@api.get("/instagram/status")
+async def api_instagram_status():
+    import os
+    token = os.getenv("INSTAGRAM_ACCESS_TOKEN") or os.getenv("FACEBOOK_ACCESS_TOKEN", "")
+    account_id = os.getenv("INSTAGRAM_ACCOUNT_ID") or os.getenv("INSTAGRAM_BUSINESS_ACCOUNT_ID", "")
+    return {"configured": bool(token and account_id)}
 
 
 @api.post("/publish/{post_id}")

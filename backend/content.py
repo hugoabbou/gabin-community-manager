@@ -188,7 +188,7 @@ async def generate_post(
     platforms: list = None,
 ):
     if platforms is None:
-        platforms = ["instagram", "facebook"]
+        platforms = ["instagram"]
 
     event = None
     if event_id and "sports_event" in themes:

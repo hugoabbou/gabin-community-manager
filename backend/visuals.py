@@ -176,9 +176,6 @@ def create_story_image(
     # --- Top bar (accent line) ---
     draw.rectangle((0, 0, STORY_W, 8), fill=accent_color)
 
-    # --- Logo ---
-    _draw_logo(draw, img, 60, 50, 90)
-
     # --- "CHEZ GABIN" label ---
     label_font = _load_font(28)
     draw.text((STORY_W - 60, 90), "@gabinrestaurant", font=label_font,

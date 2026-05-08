@@ -159,6 +159,7 @@ def create_story_image(
     hashtags: list = None,
     sport_event: dict = None,
     themes: list = None,
+    selected_image_path: str = None,
 ) -> str:
     if hashtags is None:
         hashtags = []
@@ -169,7 +170,15 @@ def create_story_image(
     sport_name = sport_event.get("sport", "Football") if sport_event else "Football"
     accent_color = SPORT_COLORS.get(sport_name, COLOR_GOLD) if is_sport else COLOR_GOLD
 
-    library_img, library_src = _pick_library_bg(themes)
+    if selected_image_path and os.path.exists(selected_image_path):
+        raw = Image.open(selected_image_path).convert("RGB")
+        raw = raw.resize((STORY_W, STORY_H), Image.LANCZOS)
+        overlay = Image.new("RGBA", raw.size, (0, 0, 0, 185))
+        result = Image.alpha_composite(raw.convert("RGBA"), overlay)
+        library_img = result.convert("RGB")
+        library_src = selected_image_path
+    else:
+        library_img, library_src = _pick_library_bg(themes)
     img = library_img if library_img is not None else _gradient_bg(STORY_W, STORY_H)
     draw = ImageDraw.Draw(img)
 

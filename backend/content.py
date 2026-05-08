@@ -1,5 +1,6 @@
 import os
 import json
+import random
 from backend.db import create_post, get_settings
 from backend.visuals import get_library_images, create_story_image
 from backend.sports import get_all_upcoming
@@ -26,7 +27,7 @@ THEME_CONTEXT = {
 }
 
 
-def _build_prompt(themes: list, event: dict = None, custom_context: str = None) -> str:
+def _build_prompt(themes: list, event: dict = None, custom_context: str = None, has_image: bool = False) -> str:
     theme_descriptions = "\n".join(
         f"- {THEME_CONTEXT.get(t, t)}" for t in themes if t in THEME_CONTEXT
     )
@@ -43,12 +44,13 @@ def _build_prompt(themes: list, event: dict = None, custom_context: str = None) 
 """
 
     custom_block = f"\nContexte additionnel : {custom_context}" if custom_context else ""
+    image_block = "\nIMPORTANT : Une photo t'est fournie. Génère un texte 100% cohérent avec son contenu visuel (si c'est un burger parle de burger, si c'est une pizza parle de pizza, etc.)." if has_image else ""
 
     return f"""Génère un post Instagram/Facebook pour Gabin.
 
 Objectifs éditoriaux :
 {theme_descriptions}
-{event_block}{custom_block}
+{event_block}{custom_block}{image_block}
 
 Génère le contenu au format JSON strict :
 {{
@@ -114,15 +116,30 @@ def _parse_ai_response(raw: str) -> dict:
     }
 
 
-def _call_gemini(prompt: str) -> str:
+def _image_parts(image_path: str) -> list:
+    import base64
+    if not image_path or not os.path.exists(image_path):
+        return []
+    ext = os.path.splitext(image_path)[1].lower().lstrip(".")
+    mime = {"jpg": "image/jpeg", "jpeg": "image/jpeg", "png": "image/png", "webp": "image/webp"}.get(ext, "image/jpeg")
+    with open(image_path, "rb") as f:
+        data = base64.b64encode(f.read()).decode()
+    return [mime, data]
+
+
+def _call_gemini(prompt: str, image_path: str = None) -> str:
     import requests as req
     api_key = os.getenv("GEMINI_API_KEY", "")
     if not api_key:
         raise ValueError("GEMINI_API_KEY non configurée dans .env")
     base_url = "https://generativelanguage.googleapis.com/v1beta/models"
+    parts = [{"text": prompt}]
+    img = _image_parts(image_path)
+    if img:
+        parts.append({"inline_data": {"mime_type": img[0], "data": img[1]}})
     payload = {
         "system_instruction": {"parts": [{"text": GABIN_SYSTEM}]},
-        "contents": [{"parts": [{"text": prompt}]}],
+        "contents": [{"parts": parts}],
         "generationConfig": {"maxOutputTokens": 2048, "temperature": 0.8},
     }
     for model in ["gemini-2.5-flash", "gemini-2.0-flash"]:
@@ -134,28 +151,33 @@ def _call_gemini(prompt: str) -> str:
     return resp.json()["candidates"][0]["content"]["parts"][0]["text"]
 
 
-def _call_claude(prompt: str) -> str:
+def _call_claude(prompt: str, image_path: str = None) -> str:
     import anthropic
     api_key = os.getenv("ANTHROPIC_API_KEY", "")
     if not api_key:
         raise ValueError("ANTHROPIC_API_KEY non configurée dans .env")
     client = anthropic.Anthropic(api_key=api_key)
+    content = []
+    img = _image_parts(image_path)
+    if img:
+        content.append({"type": "image", "source": {"type": "base64", "media_type": img[0], "data": img[1]}})
+    content.append({"type": "text", "text": prompt})
     message = client.messages.create(
         model="claude-sonnet-4-6",
         max_tokens=1024,
         system=GABIN_SYSTEM,
-        messages=[{"role": "user", "content": prompt}],
+        messages=[{"role": "user", "content": content}],
     )
     return message.content[0].text
 
 
-def _call_ai(prompt: str) -> str:
+def _call_ai(prompt: str, image_path: str = None) -> str:
     """Route to the configured AI provider (DB setting takes precedence over .env)."""
     settings = get_settings()
     provider = str(settings.get("ai_provider", os.getenv("AI_PROVIDER", "gemini"))).lower()
     if provider == "claude":
-        return _call_claude(prompt)
-    return _call_gemini(prompt)
+        return _call_claude(prompt, image_path)
+    return _call_gemini(prompt, image_path)
 
 
 async def generate_post(
@@ -172,8 +194,12 @@ async def generate_post(
         upcoming = get_all_upcoming()
         event = next((e for e in upcoming if str(e.get("id")) == str(event_id)), None)
 
-    prompt = _build_prompt(themes, event, custom_context)
-    raw = _call_ai(prompt)
+    # Choisir la photo en premier pour que l'IA génère un texte cohérent avec elle
+    library = get_library_images()
+    selected_image = random.choice(library) if library else None
+
+    prompt = _build_prompt(themes, event, custom_context, has_image=selected_image is not None)
+    raw = _call_ai(prompt, image_path=selected_image["path"] if selected_image else None)
     data = _parse_ai_response(raw)
 
     hook = data.get("hook", "")
@@ -183,9 +209,7 @@ async def generate_post(
     visual_title = data.get("visual_title", hook)
     visual_subtitle = data.get("visual_subtitle", "")
 
-    # Generate composite story image with text overlaid on a library photo
-    library = get_library_images()
-    if library:
+    if selected_image:
         image_path = create_story_image(
             title=visual_title,
             subtitle=visual_subtitle,
@@ -194,6 +218,7 @@ async def generate_post(
             hashtags=hashtags,
             sport_event=event,
             themes=themes,
+            selected_image_path=selected_image["path"],
         )
     else:
         image_path = None

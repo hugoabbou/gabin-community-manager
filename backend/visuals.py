@@ -54,43 +54,29 @@ def _load_font(size: int, bold: bool = False) -> ImageFont.FreeTypeFont:
 
 
 def get_library_images() -> list:
-    os.makedirs(LIBRARY_DIR, exist_ok=True)
-    images = []
-    for f in sorted(os.listdir(LIBRARY_DIR)):
-        if f == "archive":
-            continue
-        if os.path.splitext(f)[1].lower() in LIBRARY_EXTENSIONS:
-            images.append({
-                "filename": f,
-                "url": f"assets/library/{f}",
-                "path": os.path.join(LIBRARY_DIR, f),
-            })
-    return images
+    from backend.storage import list_library
+    return list_library()
 
 
 def _pick_library_bg(themes: list = None) -> tuple[Optional[Image.Image], Optional[str]]:
-    """Pick a random image from the library. Returns (image, source_path) or (None, None)."""
+    """Pick a random image from the library. Returns (image, filename) or (None, None)."""
     import random
-    images = get_library_images()
+    from backend.storage import list_library, local_path_for
+    images = list_library()
     if not images:
         return None, None
     chosen = random.choice(images)
-    img = Image.open(chosen["path"]).convert("RGB")
+    local = local_path_for(chosen["url"])
+    img = Image.open(local).convert("RGB")
     img = img.resize((STORY_W, STORY_H), Image.LANCZOS)
     overlay = Image.new("RGBA", img.size, (0, 0, 0, 185))
-    result = img.convert("RGBA")
-    result = Image.alpha_composite(result, overlay)
-    return result.convert("RGB"), chosen["path"]
+    result = Image.alpha_composite(img.convert("RGBA"), overlay)
+    return result.convert("RGB"), chosen["filename"]
 
 
-def _archive_library_image(path: str):
-    """Move a used library image to the archive subfolder."""
-    import shutil
-    archive_dir = os.path.join(LIBRARY_DIR, "archive")
-    os.makedirs(archive_dir, exist_ok=True)
-    dest = os.path.join(archive_dir, os.path.basename(path))
-    if os.path.exists(path):
-        shutil.move(path, dest)
+def _archive_library_image(filename: str):
+    from backend.storage import archive_image
+    archive_image(os.path.basename(filename))
 
 
 def _gradient_bg(width: int, height: int) -> Image.Image:
@@ -160,6 +146,7 @@ def create_story_image(
     sport_event: dict = None,
     themes: list = None,
     selected_image_path: str = None,
+    archive_filename: str = None,
 ) -> str:
     if hashtags is None:
         hashtags = []
@@ -176,7 +163,8 @@ def create_story_image(
         overlay = Image.new("RGBA", raw.size, (0, 0, 0, 185))
         result = Image.alpha_composite(raw.convert("RGBA"), overlay)
         library_img = result.convert("RGB")
-        library_src = selected_image_path
+        # archive_filename: nom réel du fichier (pas le chemin temp en mode cloud)
+        library_src = archive_filename or os.path.basename(selected_image_path)
     else:
         library_img, library_src = _pick_library_bg(themes)
     img = library_img if library_img is not None else _gradient_bg(STORY_W, STORY_H)
@@ -268,13 +256,30 @@ def create_story_image(
     # --- Bottom accent bar ---
     draw.rectangle((0, STORY_H - 8, STORY_W, STORY_H), fill=accent_color)
 
-    # Save
+    # Save locally
     os.makedirs(GENERATED_DIR, exist_ok=True)
     filename = f"story_{uuid.uuid4().hex[:8]}.png"
-    path = os.path.join(GENERATED_DIR, filename)
-    img.save(path, "PNG", quality=95)
+    local_path = os.path.join(GENERATED_DIR, filename)
+    img.save(local_path, "PNG", quality=95)
 
     if library_src:
         _archive_library_image(library_src)
+
+    # Upload story to Cloudinary for permanent storage
+    from backend.storage import cloud_enabled
+    if cloud_enabled():
+        try:
+            import cloudinary.uploader as _cu
+            with open(local_path, "rb") as f:
+                r = _cu.upload(
+                    f.read(),
+                    folder="gabin/generated",
+                    public_id=os.path.splitext(filename)[0],
+                    resource_type="image",
+                    overwrite=True,
+                )
+            return r["secure_url"]
+        except Exception:
+            pass
 
     return f"generated/{filename}"

@@ -2,7 +2,8 @@ import os
 import json
 import random
 from backend.db import create_post, get_settings
-from backend.visuals import get_library_images, create_story_image
+from backend.visuals import create_story_image
+from backend.storage import list_library, local_path_for, cloud_enabled
 from backend.sports import get_all_upcoming
 
 GABIN_SYSTEM = """Tu es le community manager de Gabin, une pizzeria napolitaine à Asnières-sur-Seine avec 10 800 abonnés Instagram.
@@ -195,11 +196,13 @@ async def generate_post(
         event = next((e for e in upcoming if str(e.get("id")) == str(event_id)), None)
 
     # Choisir la photo en premier pour que l'IA génère un texte cohérent avec elle
-    library = get_library_images()
+    library = list_library()
     selected_image = random.choice(library) if library else None
 
-    prompt = _build_prompt(themes, event, custom_context, has_image=selected_image is not None)
-    raw = _call_ai(prompt, image_path=selected_image["path"] if selected_image else None)
+    local_img_path = local_path_for(selected_image["url"]) if selected_image else None
+
+    prompt = _build_prompt(themes, event, custom_context, has_image=local_img_path is not None)
+    raw = _call_ai(prompt, image_path=local_img_path)
     data = _parse_ai_response(raw)
 
     hook = data.get("hook", "")
@@ -209,7 +212,7 @@ async def generate_post(
     visual_title = data.get("visual_title", hook)
     visual_subtitle = data.get("visual_subtitle", "")
 
-    if selected_image:
+    if local_img_path:
         image_path = create_story_image(
             title=visual_title,
             subtitle=visual_subtitle,
@@ -218,8 +221,15 @@ async def generate_post(
             hashtags=hashtags,
             sport_event=event,
             themes=themes,
-            selected_image_path=selected_image["path"],
+            selected_image_path=local_img_path,
+            archive_filename=selected_image["filename"],
         )
+        # Nettoyage du fichier temporaire (cloud uniquement)
+        if cloud_enabled():
+            try:
+                os.unlink(local_img_path)
+            except Exception:
+                pass
     else:
         image_path = None
 

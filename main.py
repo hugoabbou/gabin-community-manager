@@ -1,6 +1,5 @@
 import os
 import json
-import shutil
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Body, UploadFile, File, Depends, APIRouter
 from fastapi.staticfiles import StaticFiles
@@ -21,8 +20,9 @@ from backend.db import (
 )
 from backend.sports import get_all_upcoming, get_all_recent, search_team
 from backend.content import generate_post, regenerate_text
-from backend.visuals import get_library_images, LIBRARY_DIR
+from backend.visuals import LIBRARY_DIR
 from backend.social import publish_post
+from backend.storage import upload as storage_upload, list_library, list_archive, delete as storage_delete, restore_image, cloud_enabled
 
 BASE_DIR = os.path.dirname(__file__)
 GENERATED_DIR = os.path.join(BASE_DIR, "generated")
@@ -226,7 +226,7 @@ async def api_publish(post_id: int):
 
 @api.get("/library")
 async def api_get_library():
-    return get_library_images()
+    return list_library()
 
 
 @api.post("/library/upload")
@@ -236,42 +236,26 @@ async def api_upload_library(files: List[UploadFile] = File(...)):
         ext = os.path.splitext(file.filename)[1].lower()
         if ext not in {".jpg", ".jpeg", ".png", ".webp"}:
             continue
-        dest = os.path.join(LIBRARY_DIR, file.filename)
-        with open(dest, "wb") as f:
-            shutil.copyfileobj(file.file, f)
-        uploaded.append(file.filename)
+        data = await file.read()
+        result = storage_upload(data, file.filename)
+        uploaded.append(result["filename"])
     return {"uploaded": uploaded}
 
 
 @api.get("/library/archive")
 async def api_get_archive():
-    from backend.visuals import LIBRARY_DIR, LIBRARY_EXTENSIONS
-    archive_dir = os.path.join(LIBRARY_DIR, "archive")
-    os.makedirs(archive_dir, exist_ok=True)
-    images = []
-    for f in sorted(os.listdir(archive_dir)):
-        if os.path.splitext(f)[1].lower() in LIBRARY_EXTENSIONS:
-            images.append({"filename": f, "url": f"assets/library/archive/{f}"})
-    return images
+    return list_archive()
 
 
 @api.post("/library/archive/{filename}/restore")
 async def api_restore_archive(filename: str):
-    from backend.visuals import LIBRARY_DIR
-    archive_dir = os.path.join(LIBRARY_DIR, "archive")
-    src = os.path.join(archive_dir, filename)
-    dst = os.path.join(LIBRARY_DIR, filename)
-    if not os.path.exists(src):
-        raise HTTPException(status_code=404, detail="Fichier introuvable")
-    shutil.move(src, dst)
+    restore_image(filename)
     return {"ok": True}
 
 
 @api.delete("/library/{filename}")
 async def api_delete_library(filename: str):
-    path = os.path.join(LIBRARY_DIR, filename)
-    if os.path.exists(path):
-        os.remove(path)
+    storage_delete(filename)
     return {"ok": True}
 
 

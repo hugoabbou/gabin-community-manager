@@ -308,7 +308,7 @@ function renderGeneratedPosts() {
 // ── Post cards ────────────────────────────────────────────────────────────────
 function renderPostCard(p, context = "queue") {
   const tags = Array.isArray(p.hashtags) ? p.hashtags.map(h => `#${h}`).join(" ") : "";
-  const imgSrc = p.image_path ? `/${p.image_path}` : "";
+  const imgSrc = p.image_path ? (p.image_path.startsWith("http") ? p.image_path : `/${p.image_path}`) : "";
   const eventLabel = p.sport_event ? `${p.sport_event.emoji || ""} ${p.sport_event.name}` : "";
   const date = p.created_at ? new Date(p.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "";
 
@@ -336,7 +336,7 @@ function renderPostCard(p, context = "queue") {
 }
 
 function buildActions(p, context) {
-  const imgSrc = p.image_path ? `/${p.image_path}` : "";
+  const imgSrc = p.image_path ? (p.image_path.startsWith("http") ? p.image_path : `/${p.image_path}`) : "";
   const edit = `<button class="btn btn-outline btn-sm" onclick="openEditModal(${p.id})">✏️ Modifier</button>`;
   const del = `<button class="btn btn-danger btn-sm" onclick="deletePost(${p.id})">🗑</button>`;
 
@@ -631,12 +631,14 @@ async function loadLibrary() {
     api("GET", "/api/library/archive"),
   ]);
 
+  const imgSrcUrl = url => url.startsWith("http") ? url : `/${url}`;
+
   const grid = document.getElementById("libraryGrid");
   grid.innerHTML = images.length
     ? images.map(img => `
         <div class="library-item">
-          <img src="/${img.url}" alt="${img.filename}" loading="lazy"
-               onclick="openLightbox('/${img.url}')">
+          <img src="${imgSrcUrl(img.url)}" alt="${img.filename}" loading="lazy"
+               onclick="openLightbox('${imgSrcUrl(img.url)}')">
           <button class="lib-del" onclick="deleteLibrary('${img.filename}', event)">×</button>
           <div class="lib-name">${img.filename}</div>
         </div>
@@ -647,8 +649,8 @@ async function loadLibrary() {
   archiveGrid.innerHTML = archived.length
     ? archived.map(img => `
         <div class="library-item">
-          <img src="/${img.url}" alt="${img.filename}" loading="lazy"
-               onclick="openLightbox('/${img.url}')" style="opacity:0.6">
+          <img src="${imgSrcUrl(img.url)}" alt="${img.filename}" loading="lazy"
+               onclick="openLightbox('${imgSrcUrl(img.url)}')" style="opacity:0.6">
           <button class="lib-del" style="background:var(--gold);color:#000"
                   onclick="restoreArchive('${img.filename}', event)">↩</button>
           <div class="lib-name">${img.filename}</div>
